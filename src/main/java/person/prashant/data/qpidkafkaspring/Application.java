@@ -20,6 +20,7 @@ import org.springframework.kafka.core.DefaultKafkaProducerFactory;
 import org.springframework.kafka.core.KafkaAdmin;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.core.ProducerFactory;
+import org.springframework.kafka.support.ProducerListener;
 
 import javax.jms.ConnectionFactory;
 import javax.jms.Destination;
@@ -97,7 +98,7 @@ public class Application {
     }
 
     @Bean
-    public NewTopic qpidToKafka(@Value("kafka.topic") String topic) {
+    public NewTopic qpidToKafka(@Value("${kafka.topic}") String topic) {
         return new NewTopic(topic, 1, (short) 1);
     }
 
@@ -117,9 +118,10 @@ public class Application {
     }
 
     @Bean
-    public KafkaTemplate<String, String> kafkaTemplate(@Value("kafka.topic") String topic) {
+    public KafkaTemplate<String, String> kafkaTemplate(@Value("${kafka.topic}") String topic, ProducerListener producerListener) {
         KafkaTemplate kafkaTemplate = new KafkaTemplate<>(producerFactory());
         kafkaTemplate.setDefaultTopic(topic);
+        kafkaTemplate.setProducerListener(producerListener);
         return kafkaTemplate;
     }
 

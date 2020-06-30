@@ -16,7 +16,7 @@
 
     <properties>
         <java.version>1.8</java.version>
-        <qpid-client.version>0.51.0</qpid-client.version>
+        <qpid-client.version>0.52.0</qpid-client.version>
         <jms-api.version>2.0.1</jms-api.version>
     </properties>
 

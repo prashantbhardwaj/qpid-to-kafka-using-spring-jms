@@ -13,7 +13,9 @@ import org.springframework.stereotype.Component;
 import javax.jms.JMSException;
 import javax.jms.Message;
 import javax.jms.Session;
+import javax.jms.TextMessage;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Component
@@ -24,19 +26,29 @@ public class MessageListenerToSendMessageToKafka implements SessionAwareMessageL
 
     @Autowired
     private KafkaTemplate kafkaTemplate;
-    @Value("kafka.topic") String topic;
+    @Value("${kafka.topic}") String topic;
 
     @Override
     public void onMessage(Message jmsMessage, Session session) throws JMSException {
-        LOGGER.info("Received message - {}", jmsMessage);
+        String messageString = null;
         String jmsMessageId = jmsMessage.getJMSMessageID();
+
+        if(jmsMessage.isBodyAssignableTo(String.class)){
+            messageString = ((TextMessage) jmsMessage).getText();
+        } else {
+            jmsMessage.acknowledge();
+            return;
+        }
+
+        LOGGER.info("Received message with id - {} - {}", jmsMessageId, messageString);
+
         try {
             this.session = session;
-            this.pendingAcks.put(jmsMessage.getJMSMessageID(), jmsMessage);
+            this.pendingAcks.put(jmsMessageId, jmsMessage);
 
-            this.kafkaTemplate.sendDefault(jmsMessage.getJMSMessageID(), jmsMessage);
+            this.kafkaTemplate.sendDefault(jmsMessageId, messageString);
         } catch (Exception exception){
-            onError(this.topic, 1, jmsMessageId, jmsMessage.toString(), exception);
+            onError(this.topic, 1, jmsMessageId, messageString, exception);
             throw exception;
         }
     }
@@ -64,6 +76,11 @@ public class MessageListenerToSendMessageToKafka implements SessionAwareMessageL
         } catch (JMSException e) {
             LOGGER.error("Exception while recovering the session", e);
         }
+    }
+
+    @Override
+    public boolean isInterestedInSuccess() {
+        return true;
     }
 
 
